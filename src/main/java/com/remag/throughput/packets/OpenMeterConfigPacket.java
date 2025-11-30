@@ -8,6 +8,7 @@ import dev.ftb.mods.ftblibrary.config.ui.EditConfigScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -28,10 +29,10 @@ public record OpenMeterConfigPacket(BlockPos pos) {
         NetworkManager.sendToPlayer(player, ID, buf -> buf.writeBlockPos(pos));
     }
 
-    public static void handle(FriendlyByteBuf buf, Supplier<NetworkManager.PacketContext> ctx) {
+    public static void handle(FriendlyByteBuf buf, NetworkManager.PacketContext ctx) {
         BlockPos pos = buf.readBlockPos();
 
-        ctx.get().enqueueWork(() -> {
+        ctx.queue(() -> {
             Level level = Minecraft.getInstance().level;
             if (level == null) return;
 
@@ -40,11 +41,11 @@ public record OpenMeterConfigPacket(BlockPos pos) {
                 Player player = Minecraft.getInstance().player;
                 ConfigGroup group = meter.createConfigGroup(player);
 
-                Minecraft.getInstance().setScreen(new EditConfigScreen(group));
+                Minecraft.getInstance().setScreen(new EditConfigScreen(group).getPrevScreen());
             }
         });
 
-        ctx.get().setHandled(true);
+        ctx.setHandled(true);
     }
 }
 
