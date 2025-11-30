@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "throughput:block/throughput_meter",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "throughput:block/throughput_meter"
+    },
+    "facing=south": {
+      "model": "throughput:block/throughput_meter",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "throughput:block/throughput_meter",
+      "y": 270
+    }
+  }
+}

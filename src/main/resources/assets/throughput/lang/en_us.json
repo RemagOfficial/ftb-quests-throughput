@@ -1,0 +1,17 @@
+{
+  "throughput.throughput": "Throughput",
+  "throughput.throughput.title": "Throughput Task",
+  "throughput.throughput.description": "Measure automation throughput over time.",
+
+  "throughput.throughput.mode": "Mode",
+  "throughput.throughput.mode.items": "Item Throughput",
+  "throughput.throughput.mode.fluids": "Fluid Throughput",
+  "throughput.throughput.mode.energy": "Energy Throughput",
+
+  "throughput.throughput.required_rate": "Required Rate",
+  "throughput.throughput.window": "Sampling Window (ticks)",
+  "throughput.throughput.sustain": "Sustain Time (ticks)",
+
+  "ftbquests.task.throughput.throughput": "Throughput",
+  "ftbquests.task.throughput.throughput.desc": "Checks throughput of items, fluids, or FE."
+}
