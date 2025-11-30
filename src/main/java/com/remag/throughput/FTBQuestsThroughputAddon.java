@@ -4,6 +4,7 @@ import com.remag.throughput.registry.ModBlockEntities;
 import com.remag.throughput.registry.ModBlocks;
 import com.remag.throughput.registry.ModItems;
 import com.remag.throughput.tasks.ThroughputTask;
+import com.remag.throughput.packets.OpenMeterConfigPacket;
 import dev.ftb.mods.ftblibrary.FTBLibrary;
 import dev.ftb.mods.ftblibrary.icon.Icon;
 import dev.ftb.mods.ftbquests.quest.task.TaskTypes;
@@ -54,6 +55,7 @@ public class FTBQuestsThroughputAddon {
         modEventBus.addListener(this::commonSetup);
 
         registerQuests();
+        OpenMeterConfigPacket.register();
 
         ModBlockEntities.register(modEventBus);
         ModBlocks.register(modEventBus);

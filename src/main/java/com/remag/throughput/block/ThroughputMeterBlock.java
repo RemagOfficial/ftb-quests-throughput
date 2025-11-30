@@ -1,7 +1,7 @@
 package com.remag.throughput.block;
 
 import com.remag.throughput.block.blockentities.ThroughputMeterBlockEntity;
-import dev.architectury.networking.NetworkManager;
+import com.remag.throughput.packets.OpenMeterConfigPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -65,7 +65,7 @@ public class ThroughputMeterBlock extends Block implements EntityBlock {
             BlockHitResult hit
     ) {
         if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            NetworkManager.sendToPlayer(sp, new OpenMeterConfigPacket(pos));
+            OpenMeterConfigPacket.sendToPlayer(sp, pos);
         }
         return InteractionResult.SUCCESS;
     }
