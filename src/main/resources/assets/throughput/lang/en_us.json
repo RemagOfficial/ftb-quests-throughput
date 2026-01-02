@@ -13,5 +13,7 @@
   "throughput.throughput.sustain": "Sustain Time (seconds)",
 
   "ftbquests.task.throughput.throughput": "Throughput",
-  "ftbquests.task.throughput.throughput.desc": "Checks throughput of items, fluids, or FE."
+  "ftbquests.task.throughput.throughput.desc": "Checks throughput of items, fluids, or FE.",
+
+  "block.throughput.throughput_meter": "Throughput Meter"
 }
