@@ -5,6 +5,8 @@ import com.remag.throughput.block.blockentities.ThroughputMeterBlockEntity;
 import dev.architectury.networking.NetworkManager;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftblibrary.config.ui.EditConfigScreen;
+import dev.ftb.mods.ftbquests.client.ClientQuestFile;
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -26,26 +28,38 @@ public record OpenMeterConfigPacket(BlockPos pos) {
     }
 
     public static void sendToPlayer(ServerPlayer player, BlockPos pos) {
-        NetworkManager.sendToPlayer(player, ID, buf -> buf.writeBlockPos(pos));
+        // 1. Create the backing buffer + wrapper
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(
+                Unpooled.buffer(),
+                player.serverLevel().registryAccess()
+        );
+
+        // 2. Encode the BlockPos
+        BlockPos.STREAM_CODEC.encode(buf, pos);
+
+        // 3. Send full buffer to the player
+        NetworkManager.sendToPlayer(player, ID, buf);
     }
 
-    public static void handle(FriendlyByteBuf buf, NetworkManager.PacketContext ctx) {
-        BlockPos pos = buf.readBlockPos();
+    public static void handle(RegistryFriendlyByteBuf buf, NetworkManager.PacketContext ctx) {
+        BlockPos pos = BlockPos.STREAM_CODEC.decode(buf);
 
         ctx.queue(() -> {
             Level level = Minecraft.getInstance().level;
             if (level == null) return;
 
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof ThroughputMeterBlockEntity meter) {
-                Player player = Minecraft.getInstance().player;
-                ConfigGroup group = meter.createConfigGroup(player);
+            if (!(be instanceof ThroughputMeterBlockEntity meter)) return;
 
-                Minecraft.getInstance().setScreen(new EditConfigScreen(group).getPrevScreen());
-            }
+            Player player = Minecraft.getInstance().player;
+            if (player == null) return;
+
+            // Build the ConfigGroup from your BE
+            ConfigGroup group = meter.createConfigGroup(player);
+
+            // Open the actual config screen
+            new EditConfigScreen(group).setAutoclose(true).openGui();
         });
-
-        ctx.setHandled(true);
     }
 }
 

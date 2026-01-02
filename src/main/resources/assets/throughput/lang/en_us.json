@@ -10,7 +10,7 @@
 
   "throughput.throughput.required_rate": "Required Rate",
   "throughput.throughput.window": "Sampling Window (ticks)",
-  "throughput.throughput.sustain": "Sustain Time (ticks)",
+  "throughput.throughput.sustain": "Sustain Time (seconds)",
 
   "ftbquests.task.throughput.throughput": "Throughput",
   "ftbquests.task.throughput.throughput.desc": "Checks throughput of items, fluids, or FE."

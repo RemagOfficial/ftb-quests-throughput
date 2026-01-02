@@ -1,5 +1,6 @@
 package com.remag.throughput;
 
+import com.remag.throughput.packets.UpdateMeterConfigPacket;
 import com.remag.throughput.registry.ModBlockEntities;
 import com.remag.throughput.registry.ModBlocks;
 import com.remag.throughput.registry.ModItems;
@@ -56,6 +57,7 @@ public class FTBQuestsThroughputAddon {
 
         registerQuests();
         OpenMeterConfigPacket.register();
+        UpdateMeterConfigPacket.register();
 
         ModBlockEntities.register(modEventBus);
         ModBlocks.register(modEventBus);

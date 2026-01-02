@@ -1,6 +1,9 @@
 package com.remag.throughput;
 
+import com.remag.throughput.block.blockentities.rendering.ThroughputMeterRenderer;
+import com.remag.throughput.registry.ModBlockEntities;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -24,8 +27,7 @@ public class FTBQuestsThroughputAddonClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        FTBQuestsThroughputAddon.LOGGER.info("HELLO FROM CLIENT SETUP");
-        FTBQuestsThroughputAddon.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        BlockEntityRenderers.register(ModBlockEntities.THROUGHPUT_METER.get(), ThroughputMeterRenderer::new);
+
     }
 }

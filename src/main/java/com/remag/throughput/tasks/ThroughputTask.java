@@ -3,6 +3,7 @@ package com.remag.throughput.tasks;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftblibrary.config.NameMap;
 import dev.ftb.mods.ftbquests.quest.Quest;
+import dev.ftb.mods.ftbquests.quest.TeamData;
 import dev.ftb.mods.ftbquests.quest.task.Task;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
 import net.minecraft.core.HolderLookup;
@@ -10,34 +11,36 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import java.util.Date;
 import java.util.List;
 
 public class ThroughputTask extends Task {
 
-    // Assigned in registry
     public static TaskType TYPE;
 
     public enum Mode {
         ITEMS,
         FLUIDS,
-        ENERGY
+        ENERGY,
+        NONE
     }
 
-    private Mode mode = Mode.ITEMS;
-    private long requiredRate = 100L;   // items/mB/FE per second
-    private int window = 100;          // ticks
-    private int sustain = 40;          // ticks at required rate before completion
+    private Mode mode = Mode.NONE;
+    private long requiredRate = 100L;   // items/mB/FE per second required
+    private int window = 40;           // not used directly but kept for editor
+    private int sustain = 40;           // seconds of required throughput needed
 
     public ThroughputTask(long id, Quest quest) {
         super(id, quest);
     }
 
-    // -------------------------------
-    // Required overrides
-    // -------------------------------
+    // ------------------------------------------------------------
+    // BASIC OVERRIDES
+    // ------------------------------------------------------------
 
     @Override
     public TaskType getType() {
@@ -46,13 +49,46 @@ public class ThroughputTask extends Task {
 
     @Override
     public long getMaxProgress() {
-        // Progress bar = sustain time in ticks
         return sustain;
     }
 
-    // -------------------------------
-    // Saving & Loading
-    // -------------------------------
+    // ------------------------------------------------------------
+    // TASK PROGRESS ENTRY POINT (called by Meter BE)
+    // ------------------------------------------------------------
+
+    /**
+     * Called every second by the Throughput Meter block entity.
+     * @param data team progress data
+     * @param rate the measured throughput rate this second
+     */
+    public void submit(TeamData data, long rate) {
+
+        // Already completed? Stop.
+        if (data.isCompleted(this)) {
+            return;
+        }
+
+        // If rate is below requirement → RESET PROGRESS
+        if (rate < requiredRate) {
+            data.resetProgress(this);
+            return;
+        }
+
+        // Otherwise, sustain requirement for +1 tick
+        long current = data.getProgress(this);
+        long next = current + 1;
+
+        data.setProgress(this, next);
+
+        // If sustained long enough → COMPLETE
+        if (next >= sustain) {
+            data.setCompleted(this.id, new Date());
+        }
+    }
+
+    // ------------------------------------------------------------
+    // SAVING & LOADING
+    // ------------------------------------------------------------
 
     @Override
     public void writeData(CompoundTag tag, HolderLookup.Provider provider) {
@@ -74,9 +110,9 @@ public class ThroughputTask extends Task {
         sustain = tag.getInt("sustain");
     }
 
-    // -------------------------------
-    // Network Sync (Editor→Client)
-    // -------------------------------
+    // ------------------------------------------------------------
+    // NETWORK SYNC
+    // ------------------------------------------------------------
 
     @Override
     public void writeNetData(RegistryFriendlyByteBuf buf) {
@@ -98,16 +134,15 @@ public class ThroughputTask extends Task {
         sustain = buf.readVarInt();
     }
 
-    // -------------------------------
-    // Config GUI
-    // -------------------------------
+    // ------------------------------------------------------------
+    // CONFIG SCREEN
+    // ------------------------------------------------------------
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public MutableComponent getAltTitle() {
-        String modeName = mode.name().charAt(0) +
-                mode.name().substring(1).toLowerCase();
-        return Component.literal("Throughput (" + modeName + ")");
+        String modeTitle = mode.name().charAt(0) + mode.name().substring(1).toLowerCase();
+        return Component.literal("Throughput (" + modeTitle + ")");
     }
 
     @Override
@@ -115,24 +150,13 @@ public class ThroughputTask extends Task {
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
 
-        NameMap.Builder<Mode> builder = NameMap.of(
-                Mode.ITEMS,
-                List.of(Mode.values())
-        );
-
+        NameMap.Builder<Mode> builder = NameMap.of(Mode.ITEMS, List.of(Mode.values()));
         builder.id(m -> m.name().toLowerCase());
-
         builder.baseNameKey("throughput.throughput.mode");
-
         NameMap<Mode> MODE_MAP = builder.create();
 
-        config.addEnum(
-                "mode",
-                mode,
-                v -> mode = v,
-                MODE_MAP,
-                Mode.ITEMS
-        ).setNameKey("throughput.throughput.mode");
+        config.addEnum("mode", mode, v -> mode = v, MODE_MAP, Mode.ITEMS)
+                .setNameKey("throughput.throughput.mode");
         config.addLong("requiredRate", requiredRate, v -> requiredRate = v, 100L, 1L, Long.MAX_VALUE)
                 .setNameKey("throughput.throughput.required_rate");
         config.addInt("window", window, v -> window = v, 100, 1, 24000)
@@ -141,9 +165,9 @@ public class ThroughputTask extends Task {
                 .setNameKey("throughput.throughput.sustain");
     }
 
-    // -------------------------------
-    // Getters for block logic
-    // -------------------------------
+    // ------------------------------------------------------------
+    // GETTERS (used by Meter BE)
+    // ------------------------------------------------------------
 
     public Mode getMode() {
         return mode;
