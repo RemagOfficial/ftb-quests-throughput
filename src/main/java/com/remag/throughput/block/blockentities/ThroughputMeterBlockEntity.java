@@ -1,6 +1,5 @@
 package com.remag.throughput.block.blockentities;
 
-import com.remag.throughput.FTBQuestsThroughputAddon;
 import com.remag.throughput.packets.UpdateMeterConfigPacket;
 import com.remag.throughput.registry.ModBlockEntities;
 import com.remag.throughput.tasks.ThroughputTask;
@@ -9,7 +8,6 @@ import dev.ftb.mods.ftbquests.api.FTBQuestsAPI;
 import dev.ftb.mods.ftbquests.quest.TeamData;
 import dev.ftb.mods.ftbquests.quest.task.Task;
 import dev.ftb.mods.ftbquests.util.ConfigQuestObject;
-import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,8 +24,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.EmptyEnergyStorage;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.EmptyFluidHandler;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
@@ -67,6 +67,10 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
     // Fluid stats
     private long fluidsMovedThisTick = 0;
     private long milliBucketsPerSecond = 0;
+
+    // Energy stats
+    private long energyMovedThisTick = 0;
+    private long energyPerSecond = 0;
 
     private boolean editingConfig = false;
 
@@ -189,6 +193,48 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
             }
 
             return drained;
+        }
+    };
+
+    private final IEnergyStorage measuringEnergyStorage = new IEnergyStorage() {
+
+        private static final int MAX_TRANSFER = Integer.MAX_VALUE;
+
+        @Override
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            if (mode != ThroughputTask.Mode.ENERGY || getTask() == null)
+                return 0;
+
+            if (!simulate) {
+                energyMovedThisTick += maxReceive;
+            }
+
+            return maxReceive; // accept everything
+        }
+
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            return 0; // never provide energy
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return 0;
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return MAX_TRANSFER;
+        }
+
+        @Override
+        public boolean canExtract() {
+            return false;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return true;
         }
     };
 
@@ -339,14 +385,19 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
         int w = Mth.clamp(windowSize, 1, MAX_WINDOW);
 
         // store this tick's count into the ring buffer
-        long movedThisTick =
-                mode == ThroughputTask.Mode.FLUIDS ? fluidsMovedThisTick : itemsMovedThisTick;
+        long movedThisTick = switch (mode) {
+            case ITEMS  -> itemsMovedThisTick;
+            case FLUIDS -> fluidsMovedThisTick;
+            case ENERGY -> energyMovedThisTick;
+            default     -> 0;
+        };
 
         sampleWindow[sampleIndex] = movedThisTick;
         sampleIndex = (sampleIndex + 1) % w;
 
         itemsMovedThisTick = 0;
         fluidsMovedThisTick = 0;
+        energyMovedThisTick = 0;
 
         // compute moving average over [0, w)
         long sum = 0;
@@ -355,10 +406,10 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
         }
 
         // average ticks → items per second
-        if (mode == ThroughputTask.Mode.FLUIDS) {
-            milliBucketsPerSecond = (sum * 20L) / w;
-        } else {
-            itemsPerSecond = (sum * 20L) / w;
+        switch (mode) {
+            case ITEMS  -> itemsPerSecond = (sum * 20L) / w;
+            case FLUIDS -> milliBucketsPerSecond = (sum * 20L) / w;
+            case ENERGY -> energyPerSecond = (sum * 20L) / w;
         }
 
         questUpdateTimer++;
@@ -398,6 +449,8 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
             thr.submit(data, itemsPerSecond);
         } else if (mode == ThroughputTask.Mode.FLUIDS) {
             thr.submit(data, milliBucketsPerSecond);
+        } else if (mode == ThroughputTask.Mode.ENERGY) {
+            thr.submit(data, energyPerSecond);
         }
     }
 
@@ -437,11 +490,15 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
         if (mode == ThroughputTask.Mode.FLUIDS && getTask() != null)
             return measuringFluidHandler;
 
-
         return EmptyFluidHandler.INSTANCE;
     }
 
+    public IEnergyStorage getEnergyStorage(Direction side) {
+        if (mode == ThroughputTask.Mode.ENERGY && getTask() != null)
+            return measuringEnergyStorage;
 
+        return EmptyEnergyStorage.INSTANCE;
+    }
     // -------------------------------------------------------------
     //  RENDER TEXT
     // -------------------------------------------------------------
@@ -457,7 +514,7 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
         return switch (mode) {
             case ITEMS  -> INT_FORMAT.format(itemsPerSecond) + " items/s";
             case FLUIDS -> INT_FORMAT.format(milliBucketsPerSecond) + " mB/s";
-            case ENERGY -> "0 FE/s";
+            case ENERGY -> INT_FORMAT.format(energyPerSecond) + " FE/s";
             default -> "";
         };
     }
@@ -547,6 +604,8 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
             tag.putLong("ItemsPerSec", itemsPerSecond);
         } else if (mode == ThroughputTask.Mode.FLUIDS) {
             tag.putLong("FluidPerSec", milliBucketsPerSecond);
+        } else if (mode == ThroughputTask.Mode.ENERGY) {
+            tag.putLong("EnergyPerSec", energyPerSecond);
         }
 
         return tag;
@@ -571,6 +630,10 @@ public class ThroughputMeterBlockEntity extends BlockEntity {
 
         if (tag.contains("FluidPerSec")) {
             this.milliBucketsPerSecond = tag.getLong("FluidPerSec");
+        }
+
+        if (tag.contains("EnergyPerSec")) {
+            this.energyPerSecond = tag.getLong("EnergyPerSec");
         }
     }
 }

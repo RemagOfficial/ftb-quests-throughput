@@ -25,5 +25,12 @@ public class ModCapabilitiesRegistration {
                 ModBlockEntities.THROUGHPUT_METER.get(),
                 ThroughputMeterBlockEntity::getFluidHandler
         );
+
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.THROUGHPUT_METER.get(),
+                ThroughputMeterBlockEntity::getEnergyStorage
+        );
+
     }
 }

@@ -37,13 +37,24 @@ public class ThroughputMeterRenderer implements BlockEntityRenderer<ThroughputMe
 
         pose.pushPose();
 
-        // ---- your transform chain ----
-        pose.mulPose(Axis.ZP.rotationDegrees(180));
-        pose.translate(0.0, -0.2, 0.5);
+
+        // 1. Move to block center
+        pose.translate(0.5, 0.5, 0.5);
+
+        // 2. Rotate to face direction
         pose.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
-        pose.mulPose(Axis.XP.rotationDegrees(180));
-        pose.translate(0, 0, 1.001);
-        // ------------------------------
+
+        // 3. Move to the front face (slightly off to avoid z-fighting)
+        pose.translate(0.0, 0.0, 0.501);
+
+        // 4. Flip to text-facing orientation
+        // pose.mulPose(Axis.XP.rotationDegrees(180));
+        // pose.mulPose(Axis.YP.rotationDegrees(180));
+
+        // pose.scale(1.0f, -1.0f, 1.0f);
+
+        // 5. Move origin to top-left-ish of text area
+        pose.translate(0.0, -0.35, 0.0);
 
         Font font = Minecraft.getInstance().font;
 
