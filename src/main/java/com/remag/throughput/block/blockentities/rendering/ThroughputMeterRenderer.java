@@ -3,7 +3,6 @@ package com.remag.throughput.block.blockentities.rendering;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import com.remag.throughput.FTBQuestsThroughputAddon;
 import com.remag.throughput.block.ThroughputMeterBlock;
 import com.remag.throughput.block.blockentities.ThroughputMeterBlockEntity;
 import net.minecraft.client.Minecraft;
@@ -47,13 +46,7 @@ public class ThroughputMeterRenderer implements BlockEntityRenderer<ThroughputMe
         // 3. Move to the front face (slightly off to avoid z-fighting)
         pose.translate(0.0, 0.0, 0.501);
 
-        // 4. Flip to text-facing orientation
-        // pose.mulPose(Axis.XP.rotationDegrees(180));
-        // pose.mulPose(Axis.YP.rotationDegrees(180));
-
-        // pose.scale(1.0f, -1.0f, 1.0f);
-
-        // 5. Move origin to top-left-ish of text area
+        // 4. Move origin to top-left-ish of text area
         pose.translate(0.0, -0.35, 0.0);
 
         Font font = Minecraft.getInstance().font;

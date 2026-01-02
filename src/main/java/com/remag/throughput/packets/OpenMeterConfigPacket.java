@@ -5,19 +5,15 @@ import com.remag.throughput.block.blockentities.ThroughputMeterBlockEntity;
 import dev.architectury.networking.NetworkManager;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftblibrary.config.ui.EditConfigScreen;
-import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-
-import java.util.function.Supplier;
 
 public record OpenMeterConfigPacket(BlockPos pos) {
 

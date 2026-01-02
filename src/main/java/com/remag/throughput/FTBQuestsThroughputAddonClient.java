@@ -2,7 +2,6 @@ package com.remag.throughput;
 
 import com.remag.throughput.block.blockentities.rendering.ThroughputMeterRenderer;
 import com.remag.throughput.registry.ModBlockEntities;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
