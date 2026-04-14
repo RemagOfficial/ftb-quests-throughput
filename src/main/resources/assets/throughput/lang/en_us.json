@@ -11,6 +11,7 @@
   "throughput.throughput.required_rate": "Required Rate",
   "throughput.throughput.window": "Sampling Window (ticks)",
   "throughput.throughput.sustain": "Sustain Time (seconds)",
+  "throughput.throughput.allow_regression": "Allow Progress Regression",
 
   "ftbquests.task.throughput.throughput": "Throughput",
   "ftbquests.task.throughput.throughput.desc": "Checks throughput of items, fluids, or FE.",

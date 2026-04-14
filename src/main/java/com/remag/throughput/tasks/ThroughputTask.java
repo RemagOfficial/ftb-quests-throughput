@@ -1,5 +1,6 @@
 package com.remag.throughput.tasks;
 
+import com.remag.throughput.events.ThroughputEvents;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftblibrary.config.NameMap;
 import dev.ftb.mods.ftbquests.quest.Quest;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Date;
 import java.util.List;
@@ -32,6 +34,7 @@ public class ThroughputTask extends Task {
     private long requiredRate = 100L;   // items/mB/FE per second required
     private int window = 40;           // not used directly but kept for editor
     private int sustain = 40;           // seconds of required throughput needed
+    private boolean allowRegression = false; // if true, progress regresses; if false, progress resets
 
     public ThroughputTask(long id, Quest quest) {
         super(id, quest);
@@ -67,9 +70,23 @@ public class ThroughputTask extends Task {
             return;
         }
 
-        // If rate is below requirement → RESET PROGRESS
+        // If rate is below requirement
         if (rate < requiredRate) {
-            data.resetProgress(this);
+            long current = data.getProgress(this);
+            
+            // Fire the dropped event before making changes
+            NeoForge.EVENT_BUS.post(new ThroughputEvents.ThroughputDroppedEvent(
+                    this, data, rate, requiredRate, current, allowRegression
+            ));
+            
+            if (allowRegression) {
+                // Regress progress by 1 (but don't go below 0)
+                long next = Math.max(0, current - 1);
+                data.setProgress(this, next);
+            } else {
+                // Reset progress completely
+                data.resetProgress(this);
+            }
             return;
         }
 
@@ -78,6 +95,11 @@ public class ThroughputTask extends Task {
         long next = current + 1;
 
         data.setProgress(this, next);
+
+        // Fire the reached event after incrementing progress
+        NeoForge.EVENT_BUS.post(new ThroughputEvents.ThroughputReachedEvent(
+                this, data, rate, requiredRate
+        ));
 
         // If sustained long enough → COMPLETE
         if (next >= sustain) {
@@ -97,6 +119,7 @@ public class ThroughputTask extends Task {
         tag.putLong("requiredRate", requiredRate);
         tag.putInt("window", window);
         tag.putInt("sustain", sustain);
+        tag.putBoolean("allowRegression", allowRegression);
     }
 
     @Override
@@ -107,6 +130,7 @@ public class ThroughputTask extends Task {
         requiredRate = tag.getLong("requiredRate");
         window = tag.getInt("window");
         sustain = tag.getInt("sustain");
+        allowRegression = tag.getBoolean("allowRegression");
     }
 
     // ------------------------------------------------------------
@@ -121,6 +145,7 @@ public class ThroughputTask extends Task {
         buf.writeVarLong(requiredRate);
         buf.writeVarInt(window);
         buf.writeVarInt(sustain);
+        buf.writeBoolean(allowRegression);
     }
 
     @Override
@@ -131,6 +156,7 @@ public class ThroughputTask extends Task {
         requiredRate = buf.readVarLong();
         window = buf.readVarInt();
         sustain = buf.readVarInt();
+        allowRegression = buf.readBoolean();
     }
 
     // ------------------------------------------------------------
@@ -162,6 +188,8 @@ public class ThroughputTask extends Task {
                 .setNameKey("throughput.throughput.window");
         config.addInt("sustain", sustain, v -> sustain = v, 40, 1, 24000)
                 .setNameKey("throughput.throughput.sustain");
+        config.addBool("allowRegression", allowRegression, v -> allowRegression = v, false)
+                .setNameKey("throughput.throughput.allow_regression");
     }
 
     // ------------------------------------------------------------
@@ -182,5 +210,9 @@ public class ThroughputTask extends Task {
 
     public int getSustain() {
         return sustain;
+    }
+
+    public boolean isAllowRegression() {
+        return allowRegression;
     }
 }
